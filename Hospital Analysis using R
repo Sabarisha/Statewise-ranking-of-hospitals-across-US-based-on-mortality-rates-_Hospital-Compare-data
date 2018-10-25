@@ -1,0 +1,99 @@
+## Plot to visualiza the mortality rates for heart attack
+#loading csv file into dataframe called df_outcome
+outcome<-read.csv("outcome-of-care-measures.csv",colClasses = "character")
+head(outcome)
+df<-as.numeric(outcome[,11])
+final_outcome<-df[!is.na(df)]
+hist(final_outcome)
+
+
+##Finding the best hospital in the state based on least mortality rate for any given outcome such as heart atatck, heart failure, pneumonia
+best<- function(state,outcome)
+{
+  #read the outcome csv file
+  load_data<-read.csv("outcome-of-care-measures.csv",colClasses ="character" )
+  needed_data<-load_data[,c(2,7,11,17,23)]
+  colnames(needed_data)<-c("Hospital","State","heart attack","heart failure","pneumonia")
+  
+  #check for valid state
+  if(!state %in% needed_data$State){
+    stop("invalid state")
+  }
+  
+  if(!outcome %in% c("heart attack","heart failure","pneumonia")){
+    stop("invalid outcome")
+  }
+  user_data<-needed_data[needed_data$State==state,c("Hospital",outcome)]
+  min_val<-min(as.numeric(user_data[,outcome]),na.rm = TRUE)
+  row_id<-which(user_data[,outcome]==min_val)
+  hospname<-user_data[row_id,1]
+  return(hospname)
+}
+
+##Ranking hospitals in for a given state with best being the hospital with least mortality rate for any given outcome
+#outcome can be heart attack, herat failure, pneumonia
+rankhospital<-function(state,outcome,num="best")
+{
+  #read outcome data
+  load_data<-read.csv("outcome-of-care-measures.csv",colClasses="character")
+  needed_data<-load_data[,c(2,7,11,17,23)]
+  colnames(needed_data)<-c("Hospital","State","heart attack","heart failure","pneumonia")
+  #check state and outcomes are valid
+  if(!state %in% needed_data$State){
+    stop("invalid state")
+  }
+  if(!outcome %in% c("heart attack","heart failure","pneumonia")){
+    stop("invalid outcome")
+  }
+  user_data<-needed_data[needed_data$State==state,c("Hospital",outcome)]
+  user_data[,2]<-as.numeric(user_data[,2])
+  order_rate<-order(user_data[outcome],user_data$Hospital,na.last = NA)
+  #df<-user_data[order_rate,]
+  #df$rank<-rank(df$outcome)
+  if(num=="best"){
+    as.character(user_data$Hospital[order_rate[1]])
+  } else if (num == "worst") {
+    as.character(user_data$Hospital[order_rate[length(order_rate)]])
+  } else if (is.numeric(num)) {
+    as.character(user_data$Hospital[order_rate[num]])
+  } else {
+    stop("invalid num")
+  }
+}
+
+
+##Ranking hospitals in all states with best being the hospital with least mortality rate for any given outcome
+#outcome can be heart attack, herat failure, pneumonia
+rankall<-function(outcome,num="best")
+{
+  #load data
+  load_data<-read.csv("outcome-of-care-measures.csv",colClasses="character")
+  needed_data<-load_data[,c(2,7,11,17,23)]
+  colnames(needed_data)<-c("Hospital","State","heart attack","heart failure","pneumonia")
+  
+  #checking validity for outcome
+  if(!outcome %in% c("heart attack","heart failure","pneumonia")){
+    stop("invalid outcome")
+  }
+  user_data<-needed_data[,c("Hospital","State",outcome)]
+  user_data[,3]<-as.numeric(user_data[,3])
+  bystatedata<-split(user_data[,],user_data$State)
+  hospitalrank <- function(bystatedata, num) {
+    ordered_state_data <- order(bystatedata[3], bystatedata$Hospital, na.last=NA)
+    
+    if (num == "best") {
+      bystatedata$Hospital[ordered_state_data[1]]
+    } else if (num == "worst") {
+      bystatedata$Hospital[ordered_state_data[length(ordered_state_data)]]
+    } else if (is.numeric(num)) {
+      bystatedata$Hospital[ordered_state_data[num]]
+    } else {
+      stop("invalid num")
+    }
+  }
+  
+  applytoallstates<-lapply(bystatedata,hospitalrank,num)
+  finaldf<-data.frame(hospital=unlist(applytoallstates),state=names(applytoallstates),row.names = names(applytoallstates))
+}
+
+
